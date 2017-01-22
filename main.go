@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"flag"
+	"html/template"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -21,10 +22,11 @@ func main() {
 	var inputFile string
 	var outputFile string
 	var accessToken string
+	var templateFile string
 	flag.StringVar(&accessToken, "access_token", "", "github account access token")
-	flag.StringVar(&inputFile, "input_file", "README.md",
-		"the input markdown filename")
+	flag.StringVar(&inputFile, "input_file", "README.md", "the input markdown filename")
 	flag.StringVar(&outputFile, "output_file", "", "the output html filename")
+	flag.StringVar(&templateFile, "template", "", "the output html template")
 	flag.Parse()
 
 	var outStream io.Writer
@@ -78,5 +80,18 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	outStream.Write(result)
+
+	tmpl, err := template.ParseFiles(templateFile)
+	if err != nil {
+		outStream.Write(result)
+	} else {
+		err = tmpl.Execute(outStream, struct {
+			Markdown template.HTML
+		}{
+			template.HTML(result[:]),
+		})
+		if err != nil {
+			panic(err)
+		}
+	}
 }
